@@ -16,13 +16,27 @@
  ******************************************************************************/
 
 /******************************************************************************
-   Author:
-   Email: jb@taunais.com
-   Date: 11/5/24
-******************************************************************************/
+    Author:  
+    Email: jb@taunais.com 
+    Date: 11/5/24
+ ******************************************************************************/
 
-pub mod config;
+use ws2mongo::config::{Config};
+use ws2mongo::websocket::{WebSocketClient};
+use tokio_tungstenite::tungstenite::protocol::Message;
 
-pub mod websocket;
 
-pub mod mongodb;
+#[tokio::main]
+async fn main() {
+    let config = Config::new().expect("Failed to load config");
+    let mut client = WebSocketClient::new(config, None).await.expect("Failed to create WebSocket client");
+
+    client.connect().await.expect("Failed to connect to WebSocket");
+
+    // Ejemplo de cómo enviar un mensaje
+    client.send_message(Message::Text("Hello WebSocket".to_string())).await.expect("Failed to send message");
+
+    // Ejemplo de cómo recibir un mensaje
+    let msg = client.receive_message().await.expect("Failed to receive message");
+    println!("Received: {:?}", msg);
+}
