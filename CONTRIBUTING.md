@@ -16,7 +16,7 @@ To contribute to WS2Mongo, please follow these steps:
 
    ```bash
    git clone https://github.com/joaquinbejar/WS2Mongo.git
-   cd WS2Mongo
+   cd ws2mongo
    ```
 
 3. **Adopt Git Flow**: We follow the Git Flow methodology for branch management. This involves maintaining two main branches with an infinite lifetime:

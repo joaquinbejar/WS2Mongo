@@ -32,7 +32,7 @@ A step-by-step series of examples that tell you how to get a development environ
 # Clone the repository
 git clone https://github.com/joaquinbejar/WS2Mongo.git
 # Go into the repository
-cd WS2Mongo
+cd ws2mongo
 # Build the project
 cargo build
 ```
