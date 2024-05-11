@@ -34,11 +34,18 @@ use url::Url;
 pub struct WebSocketClient {
     pub config: Config,
     pub socket: Option<WebSocketStream<MaybeTlsStream<TcpStream>>>,
+    initial_messages: Vec<Message>, // Store initial messages to be sent upon connection
 }
 
 impl WebSocketClient {
-    pub fn new(config: Config, socket: Option<WebSocketStream<MaybeTlsStream<TcpStream>>>) -> Self {
-        WebSocketClient { config, socket }
+    pub fn new(config: Config,
+               socket: Option<WebSocketStream<MaybeTlsStream<TcpStream>>>,
+               initial_messages: Vec<Message>) -> Self {
+        WebSocketClient {
+            config,
+            socket,
+            initial_messages, // Initialize with the provided messages
+        }
     }
 
     pub async fn connect(&mut self) -> Result<(), Box<dyn std::error::Error>> {
@@ -74,6 +81,14 @@ impl WebSocketClient {
 
         let (ws_stream, _) = connect_async(request).await?;
         self.socket = Some(ws_stream);
+
+        // Send initial messages if the connection is successful
+        if let Some(ref mut socket) = self.socket {
+            for message in &self.initial_messages {
+                socket.send(message.clone()).await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
+            }
+        }
+
         Ok(())
     }
 

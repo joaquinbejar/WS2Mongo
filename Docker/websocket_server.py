@@ -43,19 +43,40 @@ def random_json(depth=0):
     else:
         return {f'key': random_json(depth + 1)}
 
+
+async def send_random_json(websocket):
+    """ Helper function to send random JSON data to the client """
+    message = json.dumps(random_json(4))
+    await websocket.send(message)
+    await asyncio.sleep(1)
+    return message
+
 async def websocket_handler(websocket, path):
     print(f"New client connected with IP: {websocket.remote_address}")
-    while True:
-        try:
-            message = json.dumps(random_json(4))
-            await websocket.send(message)
-            await asyncio.sleep(1)  # espera 1 segundo entre mensajes
-        except websockets.exceptions.ConnectionClosed:
-            print(f"Connection with client {websocket.remote_address} closed")
-            break
-        else:
-            print(f"Sent: {message}")
+    try:
+        while True:
+            # Espera por un mensaje del cliente
+            receive_task = asyncio.ensure_future(websocket.recv())
+            send_task = asyncio.ensure_future(send_random_json(websocket))
 
+            done, pending = await asyncio.wait(
+                [receive_task, send_task],
+                return_when=asyncio.FIRST_COMPLETED
+            )
+
+            if receive_task in done:
+                message = receive_task.result()
+                print(f"Received from {websocket.remote_address}: {message}")
+            else:
+                receive_task.cancel()
+
+            if send_task in done:
+                print(f"Sent to {websocket.remote_address}: {send_task.result()}")
+            else:
+                send_task.cancel()
+
+    except websockets.exceptions.ConnectionClosed:
+        print(f"Connection with client {websocket.remote_address} closed")
 
 start_server = websockets.serve(websocket_handler, '0.0.0.0', 5678)
 

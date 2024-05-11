@@ -50,7 +50,11 @@ async fn main() {
     env::set_var("DATABASE_NAME", "test");
     env::set_var("COLLECTION_NAME", "test");
     let config = Config::new().expect("Failed to load config");
-    let mut client = WebSocketClient::new(config, None);
+    let messages_to_send = vec![
+        Message::Text("{\"type\": \"subscribe\", \"symbol\": \"BTCUSD\"}".to_string()),
+        Message::Text("{\"type\": \"subscribe\", \"symbol\": \"ETHUSD\"}".to_string()),
+    ];
+    let mut client = WebSocketClient::new(config, None, messages_to_send);
 
     // Run the client with the message processing function
     client.run(pretty_print).await;
