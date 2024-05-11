@@ -21,8 +21,13 @@
     Date: 11/5/24
  ******************************************************************************/
 
-use crate::config::Config;
+use ws2mongo::config::{Config};
 
 pub fn connect(config: &Config) {
     println!("Connecting to MongoDB at {}", config.mongodb_uri);
+}
+
+fn main() {
+    let config = Config::new().unwrap();
+    connect(&config);
 }
