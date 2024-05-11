@@ -16,27 +16,42 @@
  ******************************************************************************/
 
 /******************************************************************************
-    Author:  
-    Email: jb@taunais.com 
-    Date: 11/5/24
- ******************************************************************************/
+   Author:
+   Email: jb@taunais.com
+   Date: 11/5/24
+******************************************************************************/
 
-use ws2mongo::config::{Config};
-use ws2mongo::websocket::{WebSocketClient};
+use std::env;
+use std::error::Error;
 use tokio_tungstenite::tungstenite::protocol::Message;
+use ws2mongo::config::Config;
+use ws2mongo::websocket::WebSocketClient;
+use serde_json::Value;
 
-
+fn pretty_print(message: Message) -> Result<(), Box<dyn Error>> {
+    match message {
+        Message::Text(text) => {
+            let parsed_json: Value = serde_json::from_str(&text)?;
+            println!("{}", serde_json::to_string_pretty(&parsed_json)?);
+        },
+        Message::Binary(data) => {
+            // Assuming binary data might also be JSON. Adjust as necessary.
+            let parsed_json: Value = serde_json::from_slice(&data)?;
+            println!("{}", serde_json::to_string_pretty(&parsed_json)?);
+        },
+        _ => eprintln!("Received a message that's neither text nor binary."),
+    }
+    Ok(())
+}
 #[tokio::main]
 async fn main() {
+    env::set_var("WEBSOCKET_URL", "ws://localhost:5678");
+    env::set_var("MONGODB_URI", "mongodb://localhost:27017");
+    env::set_var("DATABASE_NAME", "test");
+    env::set_var("COLLECTION_NAME", "test");
     let config = Config::new().expect("Failed to load config");
-    let mut client = WebSocketClient::new(config, None).await.expect("Failed to create WebSocket client");
+    let mut client = WebSocketClient::new(config, None);
 
-    client.connect().await.expect("Failed to connect to WebSocket");
-
-    // Ejemplo de cómo enviar un mensaje
-    client.send_message(Message::Text("Hello WebSocket".to_string())).await.expect("Failed to send message");
-
-    // Ejemplo de cómo recibir un mensaje
-    let msg = client.receive_message().await.expect("Failed to receive message");
-    println!("Received: {:?}", msg);
+    // Run the client with the message processing function
+    client.run(pretty_print).await;
 }

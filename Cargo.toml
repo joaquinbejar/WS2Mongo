@@ -17,6 +17,7 @@ url = "2.5.0"
 http = "1.1.0"
 async-trait = "0.1.80"
 tungstenite = "0.21.0"
+serde_json = "1.0.117"
 
 
 [features]

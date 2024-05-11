@@ -41,24 +41,40 @@ impl WebSocketClient {
         WebSocketClient { config, socket }
     }
 
-    pub async fn connect(config: Config) -> Result<Self, Box<dyn std::error::Error>> {
-        let url = Url::parse(&config.websocket_url)?;
+    pub async fn connect(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        // let url = Url::parse(&self.config.websocket_url)?;
+        let url = Url::parse(&self.config.websocket_url).unwrap();
+        // print the url
+        println!("url: {:?}", url);
 
-        let request = http::Request::builder()
+        let mut request_builder = http::Request::builder()
             .uri(url.as_str())
             .header(
-                "APCA-API-KEY-ID",
-                &config.websocket_api_key.clone().unwrap_or_default(),
+                "Sec-WebSocket-Key",
+                tokio_tungstenite::tungstenite::handshake::client::generate_key(),
             )
-            .header(
-                "APCA-API-SECRET-KEY",
-                &config.websocket_api_secret.clone().unwrap_or_default(),
-            )
-            .body(())?
+            .header("Sec-WebSocket-Version", "13")
+            .header("host", url.host_str().unwrap())
+            .header("Connection", "Upgrade")
+            .header("Upgrade", "websocket");
+
+        // Only add the headers if they are set
+        if let Some(api_key) = &self.config.websocket_api_key {
+            request_builder = request_builder.header("APCA-API-KEY-ID", api_key);
+        }
+
+        if let Some(api_secret) = &self.config.websocket_api_secret {
+            request_builder = request_builder.header("APCA-API-SECRET-KEY", api_secret);
+        }
+
+        let request = request_builder
+            .body(())
+            .map_err(|e| Box::new(e) as Box<dyn Error>)?
             .into_client_request()?;
 
         let (ws_stream, _) = connect_async(request).await?;
-        Ok(WebSocketClient::new(config, Some(ws_stream)))
+        self.socket = Some(ws_stream);
+        Ok(())
     }
 
     // Asynchronously sends a message using the WebSocket
@@ -83,6 +99,39 @@ impl WebSocketClient {
             }
         } else {
             Err("WebSocket connection not established".into())
+        }
+    }
+
+    // Manages the WebSocket connection
+    pub async fn run<F>(&mut self, process_message: F)
+    where
+        F: Fn(Message) -> Result<(), Box<dyn Error>> + Copy,
+    {
+        loop {
+            let maybe_socket = self.socket.take(); // Temporarily take the socket
+
+            if let Some(socket) = maybe_socket {
+                let (_write, mut read) = socket.split();
+                while let Some(msg) = read.next().await {
+                    match msg {
+                        Ok(message) => {
+                            if let Err(e) = process_message(message) {
+                                eprintln!("Error processing message: {}", e);
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("Error in receiving message: {}", e);
+                            break; // Exit the inner loop to attempt reconnection
+                        }
+                    }
+                }
+            }
+
+            // Attempt to reconnect
+            if let Err(e) = self.connect().await {
+                eprintln!("Failed to reconnect: {}", e);
+                tokio::time::sleep(tokio::time::Duration::from_secs(5)).await; // Delay before retrying
+            }
         }
     }
 }

@@ -1,11 +1,11 @@
 # Usa la imagen base oficial de Python
-FROM python:3.9-slim
+FROM python:3.11-slim
 
 # Establece el directorio de trabajo en /app
 WORKDIR /app
 
 # Instala la biblioteca websockets
-RUN pip install websockets
+RUN pip install websockets faker
 
 # Copia el archivo del servidor websocket en el contenedor
 COPY websocket_server.py /app
