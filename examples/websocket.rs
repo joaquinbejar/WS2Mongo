@@ -21,13 +21,12 @@
    Date: 11/5/24
 ******************************************************************************/
 
+use serde_json::json;
 use std::env;
 use tokio_tungstenite::tungstenite::protocol::Message;
 use ws2mongo::config::Config;
-use ws2mongo::websocket::WebSocketClient;
-use serde_json::json;
 use ws2mongo::utils::pretty_print;
-
+use ws2mongo::websocket::WebSocketClient;
 
 #[tokio::main]
 async fn main() {

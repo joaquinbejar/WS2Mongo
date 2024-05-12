@@ -16,10 +16,10 @@
  ******************************************************************************/
 
 /******************************************************************************
-    Author:  
-    Email: jb@taunais.com 
-    Date: 11/5/24
- ******************************************************************************/
+   Author:
+   Email: jb@taunais.com
+   Date: 11/5/24
+******************************************************************************/
 
 use std::env;
 use thiserror::Error;
@@ -47,12 +47,16 @@ pub enum ConfigError {
 impl Config {
     pub fn new() -> Result<Self, ConfigError> {
         Ok(Config {
-            websocket_url: env::var("WEBSOCKET_URL").map_err(|_| ConfigError::MissingEnvVar("WEBSOCKET_URL".to_string()))?,
+            websocket_url: env::var("WEBSOCKET_URL")
+                .map_err(|_| ConfigError::MissingEnvVar("WEBSOCKET_URL".to_string()))?,
             websocket_api_key: env::var("WEBSOCKET_API_KEY").ok(),
             websocket_api_secret: env::var("WEBSOCKET_API_SECRET").ok(),
-            mongodb_uri: env::var("MONGODB_URI").map_err(|_| ConfigError::MissingEnvVar("MONGODB_URI".to_string()))?,
-            database_name: env::var("DATABASE_NAME").map_err(|_| ConfigError::MissingEnvVar("DATABASE_NAME".to_string()))?,
-            collection_name: env::var("COLLECTION_NAME").map_err(|_| ConfigError::MissingEnvVar("COLLECTION_NAME".to_string()))?,
+            mongodb_uri: env::var("MONGODB_URI")
+                .map_err(|_| ConfigError::MissingEnvVar("MONGODB_URI".to_string()))?,
+            database_name: env::var("DATABASE_NAME")
+                .map_err(|_| ConfigError::MissingEnvVar("DATABASE_NAME".to_string()))?,
+            collection_name: env::var("COLLECTION_NAME")
+                .map_err(|_| ConfigError::MissingEnvVar("COLLECTION_NAME".to_string()))?,
             mongodb_user: env::var("MONGODB_USER").ok(),
             mongodb_password: env::var("MONGODB_PASSWORD").ok(),
             mongodb_auth_source: env::var("MONGODB_AUTH_SOURCE").ok(),

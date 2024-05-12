@@ -16,41 +16,41 @@
  ******************************************************************************/
 
 /******************************************************************************
-    Author:  
-    Email: jb@taunais.com 
-    Date: 12/5/24
- ******************************************************************************/
+   Author:
+   Email: jb@taunais.com
+   Date: 12/5/24
+******************************************************************************/
 
+use serde_json::Value;
 use std::error::Error;
 use tokio_tungstenite::tungstenite::protocol::Message;
-use serde_json::Value;
 
 pub fn pretty_print(message: Message) -> Result<(), Box<dyn Error>> {
     match message {
         Message::Text(text) => {
             let parsed_json: Value = serde_json::from_str(&text)?;
             println!("Text: {}", serde_json::to_string_pretty(&parsed_json)?);
-        },
+        }
         Message::Binary(data) => {
             let parsed_json: Value = serde_json::from_slice(&data)?;
             println!("Binary: {}", serde_json::to_string_pretty(&parsed_json)?);
-        },
+        }
         Message::Ping(ping_data) => {
             println!("Ping: {:?}", ping_data);
-        },
+        }
         Message::Pong(pong_data) => {
             println!("Pong: {:?}", pong_data);
-        },
+        }
         Message::Close(close_frame) => {
             if let Some(frame) = close_frame {
                 println!("Close: code={}, reason={}", frame.code, frame.reason);
             } else {
                 println!("Close: no details");
             }
-        },
+        }
         _ => {
             eprintln!("Received an unknown message type: {:?}", message);
-        },
+        }
     }
     Ok(())
 }

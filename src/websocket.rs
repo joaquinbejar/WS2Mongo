@@ -25,10 +25,12 @@ use crate::config::Config;
 use futures_util::{SinkExt, StreamExt}; // To access send and next methods
 use std::error::Error;
 use tokio::net::TcpStream;
-use tokio_tungstenite::{connect_async, tungstenite::protocol::Message, MaybeTlsStream, WebSocketStream, connect_async_tls_with_config, Connector};
-use url::Url;
+use tokio_tungstenite::{
+    connect_async, connect_async_tls_with_config, tungstenite::protocol::Message, Connector,
+    MaybeTlsStream, WebSocketStream,
+};
 use tungstenite::client::IntoClientRequest;
-
+use url::Url;
 
 pub struct WebSocketClient {
     pub config: Config,
@@ -37,9 +39,11 @@ pub struct WebSocketClient {
 }
 
 impl WebSocketClient {
-    pub fn new(config: Config,
-               socket: Option<WebSocketStream<MaybeTlsStream<TcpStream>>>,
-               initial_messages: Vec<Message>) -> Self {
+    pub fn new(
+        config: Config,
+        socket: Option<WebSocketStream<MaybeTlsStream<TcpStream>>>,
+        initial_messages: Vec<Message>,
+    ) -> Self {
         WebSocketClient {
             config,
             socket,
@@ -79,11 +83,10 @@ impl WebSocketClient {
             .into_client_request()?;
 
         if url.scheme() == "wss" {
-            let tls_connector = native_tls::TlsConnector::builder()
-                .build()
-                .unwrap();
+            let tls_connector = native_tls::TlsConnector::builder().build().unwrap();
             let connector = Connector::NativeTls(tls_connector);
-            let (ws_stream, _) = connect_async_tls_with_config(request, None, false, Some(connector)).await?;
+            let (ws_stream, _) =
+                connect_async_tls_with_config(request, None, false, Some(connector)).await?;
             self.socket = Some(ws_stream);
         } else {
             let (ws_stream, _) = connect_async(request).await?;
@@ -96,16 +99,15 @@ impl WebSocketClient {
         // Send initial messages if the connection is successful
         if let Some(ref mut socket) = self.socket {
             for message in &self.initial_messages {
-                socket.send(message.clone()).await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
+                socket
+                    .send(message.clone())
+                    .await
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
             }
         }
 
         Ok(())
     }
-
-
-
-
 
     // Asynchronously sends a message using the WebSocket
     pub async fn send_message(&mut self, message: Message) -> Result<(), Box<dyn Error>> {
