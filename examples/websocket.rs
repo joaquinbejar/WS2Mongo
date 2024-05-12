@@ -22,27 +22,13 @@
 ******************************************************************************/
 
 use std::env;
-use std::error::Error;
 use tokio_tungstenite::tungstenite::protocol::Message;
 use ws2mongo::config::Config;
 use ws2mongo::websocket::WebSocketClient;
-use serde_json::Value;
+use serde_json::json;
+use ws2mongo::utils::pretty_print;
 
-fn pretty_print(message: Message) -> Result<(), Box<dyn Error>> {
-    match message {
-        Message::Text(text) => {
-            let parsed_json: Value = serde_json::from_str(&text)?;
-            println!("{}", serde_json::to_string_pretty(&parsed_json)?);
-        },
-        Message::Binary(data) => {
-            // Assuming binary data might also be JSON. Adjust as necessary.
-            let parsed_json: Value = serde_json::from_slice(&data)?;
-            println!("{}", serde_json::to_string_pretty(&parsed_json)?);
-        },
-        _ => eprintln!("Received a message that's neither text nor binary."),
-    }
-    Ok(())
-}
+
 #[tokio::main]
 async fn main() {
     env::set_var("WEBSOCKET_URL", "ws://localhost:5678");
@@ -50,9 +36,21 @@ async fn main() {
     env::set_var("DATABASE_NAME", "test");
     env::set_var("COLLECTION_NAME", "test");
     let config = Config::new().expect("Failed to load config");
+    // Create messages as JSON objects
+    let btc_subscribe = json!({
+        "type": "subscribe",
+        "symbol": "BTCUSD"
+    });
+
+    let eth_subscribe = json!({
+        "type": "subscribe",
+        "symbol": "ETHUSD"
+    });
+
+    // Convert JSON objects to string and wrap them as WebSocket messages
     let messages_to_send = vec![
-        Message::Text("{\"type\": \"subscribe\", \"symbol\": \"BTCUSD\"}".to_string()),
-        Message::Text("{\"type\": \"subscribe\", \"symbol\": \"ETHUSD\"}".to_string()),
+        Message::Text(btc_subscribe.to_string()),
+        Message::Text(eth_subscribe.to_string()),
     ];
     let mut client = WebSocketClient::new(config, None, messages_to_send);
 

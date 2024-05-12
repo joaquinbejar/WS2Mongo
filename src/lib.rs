@@ -26,3 +26,4 @@ pub mod config;
 pub mod websocket;
 
 pub mod mongodb;
+pub mod utils;

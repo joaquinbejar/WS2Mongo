@@ -15,6 +15,7 @@ Cargo.lock
 .idea/
 .run/
 .env
+.local/
 
 # Added by cargo
 

@@ -28,8 +28,6 @@ use std::error::Error;
 mod websocket_tests {
     use super::*;
     use mockall::predicate::*;
-    use tokio_tungstenite::tungstenite::error::Error as WsError;
-    use tokio_tungstenite::tungstenite::Message as WsMessage;
     use tokio_tungstenite::tungstenite::{error::Error as WsError, Message as WsMessage};
     use ws2mongo::config::Config;
     use ws2mongo::websocket::WebSocketClient;
@@ -62,7 +60,9 @@ mod websocket_tests {
             .with(eq(WsMessage::Text("Hello WebSocket".to_string())))
             .returning(|_| Ok(()));
 
-        let mut client = WebSocketClient::new(config, Some(mock_stream));
+        let messages_to_send = vec![];
+
+        let mut client = WebSocketClient::new(config, Some(mock_stream), messages_to_send);
 
         let result = client
             .send_message(WsMessage::Text("Hello WebSocket".to_string()))
@@ -91,8 +91,8 @@ mod websocket_tests {
             .expect_receive()
             .times(1)
             .returning(move || Some(Ok(expected_msg.clone())));
-
-        let mut client = WebSocketClient::new(config, Some(mock_stream));
+        let messages_to_send = vec![];
+        let mut client = WebSocketClient::new(config, Some(mock_stream), messages_to_send);
 
         let result = client.receive_message().await;
         assert!(result.is_ok());

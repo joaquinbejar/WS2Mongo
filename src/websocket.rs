@@ -25,11 +25,10 @@ use crate::config::Config;
 use futures_util::{SinkExt, StreamExt}; // To access send and next methods
 use std::error::Error;
 use tokio::net::TcpStream;
-use tokio_tungstenite::tungstenite::client::IntoClientRequest;
-use tokio_tungstenite::{
-    connect_async, tungstenite::protocol::Message, MaybeTlsStream, WebSocketStream,
-};
+use tokio_tungstenite::{connect_async, tungstenite::protocol::Message, MaybeTlsStream, WebSocketStream, connect_async_tls_with_config, Connector};
 use url::Url;
+use tungstenite::client::IntoClientRequest;
+
 
 pub struct WebSocketClient {
     pub config: Config,
@@ -52,7 +51,7 @@ impl WebSocketClient {
         // let url = Url::parse(&self.config.websocket_url)?;
         let url = Url::parse(&self.config.websocket_url).unwrap();
         // print the url
-        println!("url: {:?}", url);
+        // println!("url: {:?}", url);
 
         let mut request_builder = http::Request::builder()
             .uri(url.as_str())
@@ -79,8 +78,20 @@ impl WebSocketClient {
             .map_err(|e| Box::new(e) as Box<dyn Error>)?
             .into_client_request()?;
 
-        let (ws_stream, _) = connect_async(request).await?;
-        self.socket = Some(ws_stream);
+        if url.scheme() == "wss" {
+            let tls_connector = native_tls::TlsConnector::builder()
+                .build()
+                .unwrap();
+            let connector = Connector::NativeTls(tls_connector);
+            let (ws_stream, _) = connect_async_tls_with_config(request, None, false, Some(connector)).await?;
+            self.socket = Some(ws_stream);
+        } else {
+            let (ws_stream, _) = connect_async(request).await?;
+            self.socket = Some(ws_stream);
+        }
+
+        // let (ws_stream, _) = connect_async(request).await?;
+        // self.socket = Some(ws_stream);
 
         // Send initial messages if the connection is successful
         if let Some(ref mut socket) = self.socket {
@@ -91,6 +102,10 @@ impl WebSocketClient {
 
         Ok(())
     }
+
+
+
+
 
     // Asynchronously sends a message using the WebSocket
     pub async fn send_message(&mut self, message: Message) -> Result<(), Box<dyn Error>> {
