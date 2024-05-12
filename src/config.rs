@@ -22,6 +22,7 @@
 ******************************************************************************/
 
 use std::env;
+use serde_json::json;
 use thiserror::Error;
 
 #[derive(Debug, Clone)]
@@ -62,5 +63,20 @@ impl Config {
             mongodb_auth_source: env::var("MONGODB_AUTH_SOURCE").ok(),
             mongodb_auth_mechanism: env::var("MONGODB_AUTH_MECHANISM").ok(),
         })
+    }
+    pub fn print_as_json(&self) -> serde_json::Result<String> {
+        let json_config = json!({
+            "WEBSOCKET_URL": self.websocket_url,
+            "WEBSOCKET_API_KEY": self.websocket_api_key,
+            "WEBSOCKET_API_SECRET": self.websocket_api_secret,
+            "MONGODB_URI": self.mongodb_uri,
+            "DATABASE_NAME": self.database_name,
+            "COLLECTION_NAME": self.collection_name,
+            "MONGODB_USER": self.mongodb_user,
+            "MONGODB_PASSWORD": self.mongodb_password,
+            "MONGODB_AUTH_SOURCE": self.mongodb_auth_source,
+            "MONGODB_AUTH_MECHANISM": self.mongodb_auth_mechanism,
+        });
+        serde_json::to_string_pretty(&json_config)
     }
 }
