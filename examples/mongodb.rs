@@ -18,46 +18,36 @@
 /******************************************************************************
    Author:
    Email: jb@taunais.com
-   Date: 11/5/24
+   Date: 12/5/24
 ******************************************************************************/
 
-use serde_json::json;
 use std::env;
-use tokio_tungstenite::tungstenite::protocol::Message;
+use std::sync::Arc;
+use tungstenite::Message;
 use ws2mongo::config::Config;
 use ws2mongo::mongodb::MongoClient;
-use ws2mongo::websocket::WebSocketClient;
 
 #[tokio::main]
 async fn main() {
+    // Configuring the environment variables (replace these with actual environment variable settings or direct assignments)
+    env::set_var("WEBSOCKET_URL", "ws://localhost:5678");
+    env::set_var("MONGODB_URI", "mongodb://localhost:27017");
     env::set_var("DATABASE_NAME", "test");
-    env::set_var("COLLECTION_NAME", "test");
+    env::set_var("COLLECTION_NAME", "test_data");
+    env::set_var("MONGODB_AUTH_SOURCE", "admin");
+    env::set_var("MONGODB_AUTH_MECHANISM", "SCRAM-SHA-256");
+
     let config = Config::new().expect("Failed to load config");
-    match config.print_as_json() {
-        Ok(json) => println!("{}", json),
-        Err(e) => eprintln!("Error serializing config: {}", e),
-    }
-    // Create messages as JSON objects
-    let btc_subscribe = json!({
-        "type": "subscribe",
-        "symbol": "BTCUSD"
-    });
+    // let client = MongoClient::new(config).await.expect("Failed to create MongoDB client");
 
-    let eth_subscribe = json!({
-        "type": "subscribe",
-        "symbol": "ETHUSD"
-    });
+    let message = r#"{"type": "subscribe", "symbol": "BTCUSD"}"#;
 
-    // Convert JSON objects to string and wrap them as WebSocket messages
-    let messages_to_send = vec![
-        Message::Text(btc_subscribe.to_string()),
-        Message::Text(eth_subscribe.to_string()),
-    ];
+    let instance = MongoClient::new(config).await.unwrap();
+    let instance_clone = Arc::clone(&instance);
+    let message = Message::Text(String::from(message));
 
-    let mongoclient = MongoClient::new(config.clone())
-        .await
-        .expect("Failed to create MongoDB client");
+    instance_clone.enqueue(message).await.unwrap();
 
-    let mut wsclient = WebSocketClient::new(config, None, messages_to_send, mongoclient);
-    wsclient.run().await;
+    // sleep for 10 seconds to keep the program running and allow the message to be inserted
+    tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
 }

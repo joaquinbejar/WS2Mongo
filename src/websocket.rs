@@ -22,8 +22,11 @@
 ******************************************************************************/
 
 use crate::config::Config;
+use crate::mongodb::MongoClient;
+use crate::utils::pretty_print;
 use futures_util::{SinkExt, StreamExt}; // To access send and next methods
 use std::error::Error;
+use std::sync::Arc;
 use tokio::net::TcpStream;
 use tokio_tungstenite::{
     connect_async, connect_async_tls_with_config, tungstenite::protocol::Message, Connector,
@@ -36,6 +39,7 @@ pub struct WebSocketClient {
     pub config: Config,
     pub socket: Option<WebSocketStream<MaybeTlsStream<TcpStream>>>,
     initial_messages: Vec<Message>, // Store initial messages to be sent upon connection
+    pub mongo_client: Arc<MongoClient>,
 }
 
 impl WebSocketClient {
@@ -43,19 +47,18 @@ impl WebSocketClient {
         config: Config,
         socket: Option<WebSocketStream<MaybeTlsStream<TcpStream>>>,
         initial_messages: Vec<Message>,
+        mongo_client: Arc<MongoClient>,
     ) -> Self {
         WebSocketClient {
             config,
             socket,
             initial_messages, // Initialize with the provided messages
+            mongo_client,
         }
     }
 
     pub async fn connect(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        // let url = Url::parse(&self.config.websocket_url)?;
         let url = Url::parse(&self.config.websocket_url).unwrap();
-        // print the url
-        // println!("url: {:?}", url);
 
         let mut request_builder = http::Request::builder()
             .uri(url.as_str())
@@ -92,9 +95,6 @@ impl WebSocketClient {
             let (ws_stream, _) = connect_async(request).await?;
             self.socket = Some(ws_stream);
         }
-
-        // let (ws_stream, _) = connect_async(request).await?;
-        // self.socket = Some(ws_stream);
 
         // Send initial messages if the connection is successful
         if let Some(ref mut socket) = self.socket {
@@ -135,10 +135,7 @@ impl WebSocketClient {
     }
 
     // Manages the WebSocket connection
-    pub async fn run<F>(&mut self, process_message: F)
-    where
-        F: Fn(Message) -> Result<(), Box<dyn Error>> + Copy,
-    {
+    pub async fn run(&mut self) {
         loop {
             let maybe_socket = self.socket.take(); // Temporarily take the socket
 
@@ -147,8 +144,10 @@ impl WebSocketClient {
                 while let Some(msg) = read.next().await {
                     match msg {
                         Ok(message) => {
-                            if let Err(e) = process_message(message) {
+                            if let Err(e) = self.send_to_mongo(message.clone()).await {
                                 eprintln!("Error processing message: {}", e);
+                            } else {
+                                pretty_print(message.clone()).unwrap();
                             }
                         }
                         Err(e) => {
@@ -165,5 +164,11 @@ impl WebSocketClient {
                 tokio::time::sleep(tokio::time::Duration::from_secs(5)).await; // Delay before retrying
             }
         }
+    }
+
+    // Separar la lógica que involucra el lock en una función dedicada
+    async fn send_to_mongo(&self, message: Message) -> Result<(), Box<dyn Error>> {
+        let enqueuing_result = self.mongo_client.enqueue(message).await.unwrap();
+        Ok(enqueuing_result)
     }
 }

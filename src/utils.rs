@@ -23,6 +23,7 @@
 
 use serde_json::Value;
 use std::error::Error;
+use std::fmt;
 use tokio_tungstenite::tungstenite::protocol::Message;
 
 pub fn pretty_print(message: Message) -> Result<(), Box<dyn Error>> {
@@ -54,3 +55,14 @@ pub fn pretty_print(message: Message) -> Result<(), Box<dyn Error>> {
     }
     Ok(())
 }
+
+#[derive(Debug)]
+pub struct CustomError(pub String);
+
+impl fmt::Display for CustomError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl Error for CustomError {}
