@@ -22,6 +22,7 @@
 ******************************************************************************/
 
 use crate::config::Config;
+use crate::constants::{*};
 use mongodb::bson::Document;
 use mongodb::options::{AuthMechanism, ClientOptions};
 use serde_json::Value;
@@ -110,12 +111,12 @@ impl MongoClient {
             credential.source = Some(auth_source_str.to_string());
             if let Some(mech) = &config.mongodb_auth_mechanism {
                 credential.mechanism = match mech.as_str() {
-                    "SCRAM-SHA-1" => Some(AuthMechanism::ScramSha1),
-                    "SCRAM-SHA-256" => Some(AuthMechanism::ScramSha256),
-                    "MONGODB-CR" => Some(AuthMechanism::MongoDbCr),
+                    MECHANISM_SCRAM_SHA_1 => Some(AuthMechanism::ScramSha1),
+                    MECHANISM_SCRAM_SHA_256 => Some(AuthMechanism::ScramSha256),
+                    MECHANISM_MONGODB_CR => Some(AuthMechanism::MongoDbCr),
                     // "MONGODB_AWS" => Some(AuthMechanism::MongoDbAws),
-                    "MONGODB-X509" => Some(AuthMechanism::MongoDbX509),
-                    "PLAIN" => Some(AuthMechanism::Plain),
+                    MECHANISM_MONGODB_X509 => Some(AuthMechanism::MongoDbX509),
+                    MECHANISM_PLAIN => Some(AuthMechanism::Plain),
                     mechanism => {
                         return Err(format!("Unsupported auth mechanism: {}", mechanism).into())
                     }
