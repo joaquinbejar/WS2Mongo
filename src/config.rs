@@ -24,6 +24,7 @@
 use serde_json::json;
 use std::env;
 use thiserror::Error;
+use crate::constants::{*};
 
 /// Represents the configuration options for the application.
 #[derive(Debug, Clone)]
@@ -53,10 +54,10 @@ pub struct Config {
     pub mongodb_password: Option<String>,
 
     /// Optional authentication source for MongoDB.
-    pub mongodb_auth_source: Option<String>,
+    pub mongodb_auth_source: String,
 
     /// Optional authentication mechanism for MongoDB.
-    pub mongodb_auth_mechanism: Option<String>,
+    pub mongodb_auth_mechanism: String,
 }
 
 /// An enum representing various errors that can occur during configuration.
@@ -75,16 +76,16 @@ impl Config {
     /// Returns a `ConfigError` if a required environment variable is missing.
     pub fn new() -> Result<Self, ConfigError> {
         Ok(Config {
-            websocket_url: Self::get_env_var_or_default("WEBSOCKET_URL", "ws://localhost:5678".to_string()),
+            websocket_url: Self::get_env_var_or_default("WEBSOCKET_URL", WEBSOCKET_URL.to_string()),
             websocket_api_key: env::var("WEBSOCKET_API_KEY").ok(),
             websocket_api_secret: env::var("WEBSOCKET_API_SECRET").ok(),
-            mongodb_uri: Self::get_env_var_or_default("MONGODB_URI", "mongodb://localhost:27017".to_string()),
+            mongodb_uri: Self::get_env_var_or_default("MONGODB_URI", MONGODB_URI.to_string()),
             database_name: Self::get_env_var_or_error("DATABASE_NAME")?,
             collection_name: Self::get_env_var_or_error("COLLECTION_NAME")?,
             mongodb_user: env::var("MONGODB_USER").ok(),
             mongodb_password: env::var("MONGODB_PASSWORD").ok(),
-            mongodb_auth_source: env::var("MONGODB_AUTH_SOURCE").ok(),
-            mongodb_auth_mechanism: env::var("MONGODB_AUTH_MECHANISM").ok(),
+            mongodb_auth_source: Self::get_env_var_or_default(("MONGODB_AUTH_SOURCE"), MONGODB_AUTH_SOURCE.to_string()),
+            mongodb_auth_mechanism: Self::get_env_var_or_default(("MONGODB_AUTH_MECHANISM"), MONGODB_AUTH_MECHANISM.to_string())
         })
     }
 

@@ -25,17 +25,18 @@ use std::env;
 use std::sync::Arc;
 use tungstenite::Message;
 use ws2mongo::config::Config;
+use ws2mongo::constants::{*};
 use ws2mongo::mongodb::MongoClient;
 
 #[tokio::main]
 async fn main() {
     // Configuring the environment variables (replace these with actual environment variable settings or direct assignments)
-    env::set_var("WEBSOCKET_URL", "ws://localhost:5678");
-    env::set_var("MONGODB_URI", "mongodb://localhost:27017");
+    env::set_var("WEBSOCKET_URL", WEBSOCKET_URL);
+    env::set_var("MONGODB_URI", MONGODB_URI);
     env::set_var("DATABASE_NAME", "test");
     env::set_var("COLLECTION_NAME", "test_data");
-    env::set_var("MONGODB_AUTH_SOURCE", "admin");
-    env::set_var("MONGODB_AUTH_MECHANISM", "SCRAM-SHA-256");
+    env::set_var("MONGODB_AUTH_SOURCE", MONGODB_AUTH_SOURCE);
+    env::set_var("MONGODB_AUTH_MECHANISM", MONGODB_AUTH_MECHANISM);
 
     let config = Config::new().expect("Failed to load config");
     // let client = MongoClient::new(config).await.expect("Failed to create MongoDB client");

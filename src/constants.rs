@@ -16,16 +16,14 @@
  ******************************************************************************/
 
 /******************************************************************************
-   Author:
-   Email: jb@taunais.com
-   Date: 11/5/24
-******************************************************************************/
+    Author:  
+    Email: jb@taunais.com 
+    Date: 17/5/24
+ ******************************************************************************/
 
-pub mod config;
-
-pub mod websocket;
-
-pub mod mongodb;
-pub mod utils;
-
-pub mod constants;
+pub const WEBSOCKET_URL: &str = "ws://localhost:5678";
+pub const MONGODB_URI: &str = "mongodb://localhost:27017";
+pub const DATABASE_NAME: &str = "test";
+pub const COLLECTION_NAME: &str = "test_data";
+pub const MONGODB_AUTH_SOURCE: &str = "admin";
+pub const MONGODB_AUTH_MECHANISM: &str = "SCRAM-SHA-256";
