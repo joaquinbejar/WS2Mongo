@@ -35,31 +35,60 @@ use mongodb::{
     bson::doc, error::Error as MongoError, error::Result as MongoResult, Client, Collection,
 };
 
+/// Generates a MongoDB error with the given message.
+///
+/// This function is used to generate a custom MongoDB error. It takes a `&str` parameter `message`
+/// which represents the error message to be associated with the generated error. The function
+/// creates a new `MongoError` by wrapping a standard IO error with the given message.
+///
+/// # Arguments
+///
+/// * `message` - The error message associated with the MongoDB error.
+///
+/// # Returns
+///
+/// The generated `MongoError` containing the provided error message.
+fn generate_mongo_error(message: &str) -> MongoError {
+    MongoError::from(std::io::Error::new(
+        std::io::ErrorKind::Other,
+        message.to_string(),
+    ))
+}
+
+/// Test the connection to MongoDB.
+///
+/// # Arguments
+///
+/// * `client` - The MongoDB client.
+/// * `db` - The name of the database.
+///
+/// # Returns
+///
+/// Returns `Ok(())` if the connection was successful, otherwise returns an error.
+///
+/// # Examples
+///
 pub async fn test_mongo_connection(client: &Client, db: &str) -> MongoResult<()> {
     let database = client.database(db);
     let command = doc! {"ping": 1};
     let result = database.run_command(command, None).await?;
 
-    // Verifica que la respuesta contenga 'ok: 1.0'
-    match result.get_f64("ok") {
-        Ok(ok) if ok == 1.0 => {
+    if let Ok(ok) = result.get_f64("ok") {
+        if ok == 1.0 {
             println!("Successfully connected to MongoDB.");
-            Ok(())
+            return Ok(());
         }
-        Ok(_) => {
-            println!("Received an unexpected response from MongoDB.");
-            Err(MongoError::from(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "Unexpected response to ping",
-            )))
-        }
+        println!("Received an unexpected response from MongoDB.");
+        return Err(generate_mongo_error("Unexpected response to ping"));
+    }
+
+    // Error handling, separate match clause
+    match result.get_f64("ok") {
         Err(e) => {
             println!("Failed to retrieve 'ok' from response: {}", e);
-            Err(MongoError::from(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("{}", e),
-            )))
+            Err(generate_mongo_error(&format!("{}", e)))
         }
+        _ => unreachable!(), // This case should've been handled above
     }
 }
 
@@ -71,11 +100,9 @@ pub struct MongoClient {
 
 impl MongoClient {
     pub async fn new(config: Config) -> Result<Arc<Self>, Box<dyn Error>> {
-        // Parse MongoDB URI and create client options
         let mut client_options = ClientOptions::parse(&config.mongodb_uri).await?;
         let auth_source_str: &str = config.mongodb_auth_source.as_deref().unwrap_or("admin");
 
-        // Optionally set the username, password, auth source, and mechanism if provided
         if let Some(user) = config.mongodb_user {
             let mut credential = mongodb::options::Credential::default();
             credential.username = Some(user);
@@ -100,7 +127,6 @@ impl MongoClient {
 
         let client = Client::with_options(client_options)?;
 
-        // Test the connection to MongoDB
         if let Err(_e) = test_mongo_connection(&client, auth_source_str).await {
             return Err("Error connecting to MongoDB".into());
         }
@@ -116,7 +142,6 @@ impl MongoClient {
             receiver: Arc::new(Mutex::new(receiver)),
         });
 
-        // Use `tokio::spawn` to create a new independent async task
         let instance_clone = Arc::clone(&instance);
         tokio::spawn(async move {
             instance_clone.start().await;
@@ -126,26 +151,10 @@ impl MongoClient {
     }
 
     pub async fn start(&self) {
-        // Clone the receiver
         let receiver = Arc::clone(&self.receiver);
-
-        // Lock the receiver
         let mut receiver = receiver.lock().await;
 
         while let Some(json_value) = receiver.recv().await {
-            // // Convert `json_value` to a `Document` here
-            // let document = match serde_json::from_value::<Document>(json_value) {
-            //     Ok(document) => document,
-            //     Err(e) => {
-            //         eprintln!("Error converting JSON to a document: {}", e);
-            //         continue;
-            //     }
-            // };
-            //
-            // // Insert the document into MongoDB
-            // if let Err(e) = self.collection.insert_one(document, None).await {
-            //     eprintln!("Error inserting document into MongoDB: {}", e);
-            // }
             match json_value {
                 Value::Object(_) => {
                     // Directly try to convert the Value to a Document
