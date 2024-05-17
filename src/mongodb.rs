@@ -93,13 +93,28 @@ pub async fn test_mongo_connection(client: &Client, db: &str) -> MongoResult<()>
     }
 }
 
+/// Represents a MongoDB client with functionality for sending and receiving messages.
 pub struct MongoClient {
+    /// The MongoDB collection to interact with.
     collection: Collection<Document>,
+
+    /// The sender part of the channel for sending JSON values.
     sender: Sender<Value>,
+
+    /// The receiver part of the channel for receiving JSON values, wrapped in an `Arc` and `Mutex`.
     receiver: Arc<Mutex<Receiver<Value>>>,
 }
 
 impl MongoClient {
+    /// Creates a new instance of `MongoClient` and connects to MongoDB.
+    ///
+    /// # Arguments
+    ///
+    /// * `config` - The configuration options for the MongoDB client.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Arc<Self>, Box<dyn Error>>` - Returns an `Arc` containing the new `MongoClient` instance, or an error if the connection fails.
     pub async fn new(config: Config) -> Result<Arc<Self>, Box<dyn Error>> {
         let mut client_options = ClientOptions::parse(&config.mongodb_uri).await?;
         let auth_source_str: &str = config.mongodb_auth_source.as_deref().unwrap_or("admin");
@@ -151,6 +166,7 @@ impl MongoClient {
         Ok(instance)
     }
 
+    /// Starts the MongoDB client to process incoming JSON messages and insert them into the database.
     pub async fn start(&self) {
         let receiver = Arc::clone(&self.receiver);
         let mut receiver = receiver.lock().await;
@@ -194,7 +210,15 @@ impl MongoClient {
         }
 
     }
-
+    /// Enqueues a message to be processed by the MongoDB client.
+    ///
+    /// # Arguments
+    ///
+    /// * `message` - The message to be enqueued.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<(), Box<dyn Error>>` - Returns `Ok(())` if the message is successfully enqueued, otherwise returns an error.
     pub async fn enqueue(&self, message: Message) -> Result<(), Box<dyn Error>> {
         match message {
             Message::Text(text) => {
