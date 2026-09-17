@@ -50,8 +50,8 @@ async fn main() {
 
     // Convert JSON objects to string and wrap them as WebSocket messages
     let messages_to_send = vec![
-        Message::Text(btc_subscribe.to_string()),
-        Message::Text(eth_subscribe.to_string()),
+        Message::text(btc_subscribe.to_string()),
+        Message::text(eth_subscribe.to_string()),
     ];
 
     let mongoclient = MongoClient::new(config.clone())

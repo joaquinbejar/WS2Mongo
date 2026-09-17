@@ -22,7 +22,7 @@
 ******************************************************************************/
 
 use crate::config::Config;
-use crate::constants::{*};
+use crate::constants::*;
 use mongodb::bson::Document;
 use mongodb::options::{AuthMechanism, ClientOptions};
 use serde_json::Value;
@@ -50,10 +50,7 @@ use mongodb::{
 ///
 /// The generated `MongoError` containing the provided error message.
 fn generate_mongo_error(message: &str) -> MongoError {
-    MongoError::from(std::io::Error::new(
-        std::io::ErrorKind::Other,
-        message.to_string(),
-    ))
+    MongoError::from(std::io::Error::other(message.to_string()))
 }
 
 /// Test the connection to MongoDB.
@@ -72,7 +69,7 @@ fn generate_mongo_error(message: &str) -> MongoError {
 pub async fn test_mongo_connection(client: &Client, db: &str) -> MongoResult<()> {
     let database = client.database(db);
     let command = doc! {"ping": 1};
-    let result = database.run_command(command, None).await?;
+    let result = database.run_command(command).await?;
 
     if let Ok(ok) = result.get_f64("ok") {
         if ok == 1.0 {
@@ -117,15 +114,15 @@ impl MongoClient {
     /// * `Result<Arc<Self>, Box<dyn Error>>` - Returns an `Arc` containing the new `MongoClient` instance, or an error if the connection fails.
     pub async fn new(config: Config) -> Result<Arc<Self>, Box<dyn Error>> {
         let mut client_options = ClientOptions::parse(&config.mongodb_uri).await?;
-        let auth_source_str: &str = config.mongodb_auth_source.as_deref().unwrap_or("admin");
+        let auth_source_str: &str = &config.mongodb_auth_source;
 
         if let Some(user) = config.mongodb_user {
             let mut credential = mongodb::options::Credential::default();
             credential.username = Some(user);
             credential.password = config.mongodb_password;
             credential.source = Some(auth_source_str.to_string());
-            if let Some(mech) = &config.mongodb_auth_mechanism {
-                credential.mechanism = match mech.as_str() {
+            {
+                credential.mechanism = match config.mongodb_auth_mechanism.as_str() {
                     MECHANISM_SCRAM_SHA_1 => Some(AuthMechanism::ScramSha1),
                     MECHANISM_SCRAM_SHA_256 => Some(AuthMechanism::ScramSha256),
                     MECHANISM_MONGODB_CR => Some(AuthMechanism::MongoDbCr),
@@ -184,10 +181,10 @@ impl MongoClient {
                     };
 
                     // Insert the document into MongoDB
-                    if let Err(e) = self.collection.insert_one(document, None).await {
+                    if let Err(e) = self.collection.insert_one(document).await {
                         eprintln!("Error inserting document into MongoDB: {}", e);
                     }
-                },
+                }
                 Value::Array(array) => {
                     // Iterate over each item in the array, assuming each item is an object
                     for item in array {
@@ -200,15 +197,14 @@ impl MongoClient {
                         };
 
                         // Insert each document into MongoDB
-                        if let Err(e) = self.collection.insert_one(document, None).await {
+                        if let Err(e) = self.collection.insert_one(document).await {
                             eprintln!("Error inserting document into MongoDB: {}", e);
                         }
                     }
-                },
+                }
                 _ => eprintln!("Received JSON is neither an object nor an array"),
             }
         }
-
     }
     /// Enqueues a message to be processed by the MongoDB client.
     ///

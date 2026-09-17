@@ -21,10 +21,10 @@
    Date: 11/5/24
 ******************************************************************************/
 
+use crate::constants::*;
 use serde_json::json;
 use std::env;
 use thiserror::Error;
-use crate::constants::{*};
 
 /// Represents the configuration options for the application.
 #[derive(Debug, Clone)]
@@ -84,8 +84,14 @@ impl Config {
             collection_name: Self::get_env_var_or_error("COLLECTION_NAME")?,
             mongodb_user: env::var("MONGODB_USER").ok(),
             mongodb_password: env::var("MONGODB_PASSWORD").ok(),
-            mongodb_auth_source: Self::get_env_var_or_default(("MONGODB_AUTH_SOURCE"), MONGODB_AUTH_SOURCE.to_string()),
-            mongodb_auth_mechanism: Self::get_env_var_or_default(("MONGODB_AUTH_MECHANISM"), MONGODB_AUTH_MECHANISM.to_string())
+            mongodb_auth_source: Self::get_env_var_or_default(
+                "MONGODB_AUTH_SOURCE",
+                MONGODB_AUTH_SOURCE.to_string(),
+            ),
+            mongodb_auth_mechanism: Self::get_env_var_or_default(
+                "MONGODB_AUTH_MECHANISM",
+                MONGODB_AUTH_MECHANISM.to_string(),
+            ),
         })
     }
 

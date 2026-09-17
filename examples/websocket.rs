@@ -25,7 +25,7 @@ use serde_json::json;
 use std::env;
 use tokio_tungstenite::tungstenite::protocol::Message;
 use ws2mongo::config::Config;
-use ws2mongo::utils::pretty_print;
+use ws2mongo::mongodb::MongoClient;
 use ws2mongo::websocket::WebSocketClient;
 
 #[tokio::main]
@@ -48,11 +48,15 @@ async fn main() {
 
     // Convert JSON objects to string and wrap them as WebSocket messages
     let messages_to_send = vec![
-        Message::Text(btc_subscribe.to_string()),
-        Message::Text(eth_subscribe.to_string()),
+        Message::text(btc_subscribe.to_string()),
+        Message::text(eth_subscribe.to_string()),
     ];
-    let mut client = WebSocketClient::new(config, None, messages_to_send);
+    let mongoclient = MongoClient::new(config.clone())
+        .await
+        .expect("Failed to create MongoDB client");
 
-    // Run the client with the message processing function
-    client.run(pretty_print).await;
+    let mut client = WebSocketClient::new(config, None, messages_to_send, mongoclient);
+
+    // Run the client; received messages are forwarded to MongoDB
+    client.run().await;
 }
