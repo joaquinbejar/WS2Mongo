@@ -168,7 +168,6 @@ impl WebSocketClient {
 
     // Separar la lógica que involucra el lock en una función dedicada
     async fn send_to_mongo(&self, message: Message) -> Result<(), Box<dyn Error>> {
-        let enqueuing_result = self.mongo_client.enqueue(message).await.unwrap();
-        Ok(enqueuing_result)
+        self.mongo_client.enqueue(message).await
     }
 }

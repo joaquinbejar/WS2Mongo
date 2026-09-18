@@ -22,83 +22,72 @@
 ******************************************************************************/
 
 use futures_util::{SinkExt, StreamExt};
-use std::error::Error;
 
 #[cfg(test)]
 mod websocket_tests {
     use super::*;
-    use mockall::predicate::*;
-    use tokio_tungstenite::tungstenite::{error::Error as WsError, Message as WsMessage};
+    use tokio::net::TcpListener;
+    use tokio_tungstenite::tungstenite::Message as WsMessage;
     use ws2mongo::config::Config;
+    use ws2mongo::mongodb::MongoClient;
     use ws2mongo::websocket::WebSocketClient;
 
-    trait MockWebSocketStream {
-        fn new() -> Self;
-        async fn send(&mut self, msg: WsMessage) -> Result<(), WsError>;
-        async fn receive(&mut self) -> Option<Result<WsMessage, WsError>>;
+    /// Spawns a local WebSocket echo server and returns its address.
+    async fn spawn_echo_server() -> std::net::SocketAddr {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            let (stream, _) = listener.accept().await.unwrap();
+            let mut ws = tokio_tungstenite::accept_async(stream).await.unwrap();
+            while let Some(Ok(msg)) = ws.next().await {
+                if msg.is_text() || msg.is_binary() {
+                    ws.send(msg).await.unwrap();
+                }
+            }
+        });
+        addr
+    }
+
+    fn test_config(addr: std::net::SocketAddr) -> Config {
+        Config {
+            websocket_url: format!("ws://{addr}"),
+            websocket_api_key: None,
+            websocket_api_secret: None,
+            mongodb_uri: "mongodb://localhost:27017".to_string(),
+            database_name: "test".to_string(),
+            collection_name: "test".to_string(),
+            mongodb_user: None,
+            mongodb_password: None,
+            mongodb_auth_source: "admin".to_string(),
+            mongodb_auth_mechanism: "SCRAM-SHA-256".to_string(),
+        }
     }
 
     #[tokio::test]
-    async fn test_send_message_success() {
-        let mut mock_stream = MockWebSocketStream::new();
-        let config = Config {
-            websocket_url: String::from("ws://example.com"),
-            websocket_api_key: None,
-            websocket_api_secret: None,
-            mongodb_uri: "".to_string(),
-            database_name: "".to_string(),
-            collection_name: "".to_string(),
-            mongodb_user: None,
-            mongodb_password: None,
-            mongodb_auth_source: None,
-            mongodb_auth_mechanism: None,
-        };
+    #[ignore = "requires a live MongoDB at mongodb://localhost:27017 to build MongoClient"]
+    async fn test_send_and_receive_message_roundtrip() {
+        let addr = spawn_echo_server().await;
+        let config = test_config(addr);
+        let mongo_client = MongoClient::new(config.clone())
+            .await
+            .expect("Failed to create MongoDB client");
 
-        mock_stream
-            .expect_send()
-            .times(1)
-            .with(eq(WsMessage::Text("Hello WebSocket".to_string())))
-            .returning(|_| Ok(()));
+        let mut client = WebSocketClient::new(config, None, vec![], mongo_client);
+        client
+            .connect()
+            .await
+            .expect("Failed to connect to echo server");
 
-        let messages_to_send = vec![];
+        let sent = WsMessage::text("Hello WebSocket");
+        client
+            .send_message(sent.clone())
+            .await
+            .expect("Failed to send message");
 
-        let mut client = WebSocketClient::new(config, Some(mock_stream), messages_to_send);
-
-        let result = client
-            .send_message(WsMessage::Text("Hello WebSocket".to_string()))
-            .await;
-        assert!(result.is_ok());
-    }
-
-    #[tokio::test]
-    async fn test_receive_message_success() {
-        let mut mock_stream = MockWebSocketStream::new();
-        let config = Config {
-            websocket_url: String::from("ws://example.com"),
-            websocket_api_key: None,
-            websocket_api_secret: None,
-            mongodb_uri: "".to_string(),
-            database_name: "".to_string(),
-            collection_name: "".to_string(),
-            mongodb_user: None,
-            mongodb_password: None,
-            mongodb_auth_source: None,
-            mongodb_auth_mechanism: None,
-        };
-
-        let expected_msg = WsMessage::Text("Hello from WebSocket".to_string());
-        mock_stream
-            .expect_receive()
-            .times(1)
-            .returning(move || Some(Ok(expected_msg.clone())));
-        let messages_to_send = vec![];
-        let mut client = WebSocketClient::new(config, Some(mock_stream), messages_to_send);
-
-        let result = client.receive_message().await;
-        assert!(result.is_ok());
-        assert_eq!(
-            result.unwrap(),
-            WsMessage::Text("Hello from WebSocket".to_string())
-        );
+        let received = client
+            .receive_message()
+            .await
+            .expect("Failed to receive message");
+        assert_eq!(received, sent);
     }
 }

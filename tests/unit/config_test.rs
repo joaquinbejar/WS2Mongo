@@ -59,8 +59,8 @@ mod config_tests {
         assert_eq!(config.collection_name, "testcollection");
         assert_eq!(config.mongodb_user.unwrap(), "user");
         assert_eq!(config.mongodb_password.unwrap(), "password");
-        assert_eq!(config.mongodb_auth_source.unwrap(), "admin");
-        assert_eq!(config.mongodb_auth_mechanism.unwrap(), "SCRAM-SHA-256");
+        assert_eq!(config.mongodb_auth_source, "admin");
+        assert_eq!(config.mongodb_auth_mechanism, "SCRAM-SHA-256");
     }
 
     #[test]
@@ -103,7 +103,7 @@ mod config_tests {
         assert_eq!(config.collection_name, "testcollection");
         assert!(config.mongodb_user.is_none());
         assert!(config.mongodb_password.is_none());
-        assert!(config.mongodb_auth_source.is_none());
-        assert!(config.mongodb_auth_mechanism.is_none());
+        assert_eq!(config.mongodb_auth_source, "admin");
+        assert_eq!(config.mongodb_auth_mechanism, "SCRAM-SHA-256");
     }
 }

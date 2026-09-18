@@ -25,7 +25,7 @@ use std::env;
 use std::sync::Arc;
 use tungstenite::Message;
 use ws2mongo::config::Config;
-use ws2mongo::constants::{*};
+use ws2mongo::constants::*;
 use ws2mongo::mongodb::MongoClient;
 
 #[tokio::main]
@@ -45,7 +45,7 @@ async fn main() {
 
     let instance = MongoClient::new(config).await.unwrap();
     let instance_clone = Arc::clone(&instance);
-    let message = Message::Text(String::from(message));
+    let message = Message::text(message);
 
     instance_clone.enqueue(message).await.unwrap();
 
